@@ -1,11 +1,18 @@
 /*
- * Copyright <YEAR> <COPYRIGHT HOLDER>
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+ * and associated documentation files (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge, publish, distribute,
+ * sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+ * The above copyright notice and this permission notice shall be included in all copies or
+ * substantial portions of the Software.
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 #ifndef CONSTEXPR_MD5_H_
@@ -22,7 +29,12 @@ namespace md5 {
         constexpr uint32_t CBLOCK = 64;
         constexpr uint32_t LBLOCK = CBLOCK / 4;
 
-        constexpr Digest make_digest(const std::array<uint32_t, 4> & input) noexcept {
+        constexpr size_t const_strlen(const char* str)
+        {
+            return (*str == 0) ? 0 : const_strlen(str + 1) + 1;
+        }
+
+        constexpr Digest make_digest(const std::array<uint32_t, 4>& input) noexcept {
             Digest digest{};
             for (size_t i = 0; i < input.size(); ++i) {
                 digest[i * 4] = static_cast<unsigned char>((input[i]) & 0xff);
@@ -85,8 +97,8 @@ namespace md5 {
             6, 10, 15, 21
         };
 
-        constexpr unsigned char PADDING[CBLOCK] = {
-            0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        constexpr char PADDING[CBLOCK] = {
+            -128, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 0x80 = -128
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -124,9 +136,7 @@ namespace md5 {
                 , nh(0)
             {}
 
-            constexpr void append(const void* data, size_t len) noexcept {
-                const unsigned char* begin = static_cast<const unsigned char*>(data);
-
+            constexpr void append(const char* data, size_t len) noexcept {
                 std::array<uint32_t, LBLOCK> input{};
                 auto k = (nl >> 3) & 0x3f;
                 auto length = static_cast<uint32_t>(len);
@@ -135,8 +145,8 @@ namespace md5 {
                     nh += 1;
                 }
                 nh += length >> 29;
-                for (auto ptr = begin; ptr != begin + len; ++ptr) {
-                    buffer[k++] = *ptr;
+                for (auto ptr = data; ptr != data + len; ++ptr) {
+                    buffer[k++] = static_cast<unsigned char>(static_cast<int16_t>(*ptr) + UCHAR_MAX + 1);
                     if (k == 0x40) {
                         auto j = 0;
                         for (auto i = 0; i < LBLOCK; ++i) {
@@ -192,13 +202,6 @@ namespace md5 {
     }
 
     template <size_t N>
-    constexpr Digest compute(const unsigned char(&data)[N]) noexcept {
-        details::Context c;
-        c.append(data, N);
-        return c.final();
-    }
-
-    template <size_t N>
     constexpr Digest compute(const char(&data)[N]) noexcept {
         details::Context c;
         // Don't hash the null-terminator
@@ -209,7 +212,7 @@ namespace md5 {
     constexpr Digest compute(const char* s) noexcept {
         details::Context c;
         // Don't hash the null-terminator
-        c.append(s, strlen(s));
+        c.append(s, details::const_strlen(s));
         return c.final();
     }
 }
