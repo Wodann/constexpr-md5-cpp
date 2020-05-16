@@ -19,6 +19,7 @@
 #define CONSTEXPR_MD5_H_
 
 #include <array>
+#include <climits>
 #include <cstdint>
 #include <cstring>
 
